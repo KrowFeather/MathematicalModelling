@@ -11,7 +11,7 @@ from statsmodels.tsa.holtwinters import ExponentialSmoothing
 
 # 导入数据并设置日期列为索引
 # 这里将日期解析为日期格式，并将列重命名为“日期”和“女装”
-dta = pd.read_csv('./dataset/women_dress.csv', parse_dates=['0'])
+dta = pd.read_csv('women_dress.csv', parse_dates=['0'])
 dta = dta.rename(columns={'0': '日期', '1': '女装'})
 dta.set_index('日期', inplace=True)
 print(dta)
@@ -24,6 +24,7 @@ plt.show()
 dta.plot(figsize=(10, 4))
 
 # Holt-Winters法应用于时间序列建模
+#diff1=dta.diff().dropna()
 winter_model = ExponentialSmoothing(dta).fit()
 print(winter_model.summary())
 
@@ -55,17 +56,24 @@ diff1 = dta.diff().dropna()
 plt.plot(diff1)
 plt.show()
 
+diff2= diff1.diff().dropna()
+plt.plot(diff2)
+plt.show()
+
+diff3=diff2.diff().dropna()
+plt.plot(diff3)
+plt.show()
 # 差分后的自相关图和偏自相关图
 fig = plt.figure(figsize=(8, 5))
 ax1 = fig.add_subplot(211)
-fig = sm.graphics.tsa.plot_acf(diff1.values.squeeze(), lags=40, ax=ax1)
+fig = sm.graphics.tsa.plot_acf(diff3.values.squeeze(), lags=40, ax=ax1)
 ax2 = fig.add_subplot(212)
-fig = sm.graphics.tsa.plot_pacf(diff1, lags=40, ax=ax2)
+fig = sm.graphics.tsa.plot_pacf(diff3, lags=40, ax=ax2)
 plt.tight_layout()
 plt.show()
 
 # 使用ARIMA模型进行拟合，参数order=(p,d,q)
-arma_mod20 = ARIMA(dta, order=(1, 1, 1)).fit()  # p=1, d=1, q=1
+arma_mod20 = ARIMA(dta, order=(1, 3, 3)).fit()  # p=1, d=1, q=1
 print(arma_mod20.params)
 
 # 残差检验
@@ -116,4 +124,5 @@ mae, rmse = evaluation(dta.to_numpy(), predict_sunspots[:len(dta)].to_numpy())
 print(f'MAE: {mae}, RMSE: {rmse}')
 
 # 结束程序
+
 exit(0)
