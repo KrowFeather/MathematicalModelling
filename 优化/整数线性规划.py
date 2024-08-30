@@ -1,12 +1,9 @@
 from pulp import *
-c=[20,10]
-a=[[5,4],
-   [2,5]]
-b=[24,13]
 solver=LpProblem('test1',LpMaximize)
-x1=LpVariable('x1',lowBound=0,cat=LpInteger)
-x2=LpVariable('x2',lowBound=0,cat=LpInteger)
-solver+=(5*x1+4*x2<=24,'c1')
-solver+=(2*x1+5*x2<=24,'c2')
-solver+=(20*x1+10*x2,'obj')
+x1=LpVariable('x1',lowBound=0,)
+x2=LpVariable('x2',lowBound=0,)
+x3=LpVariable('x3',lowBound=0,)
+solver+=(1.5*x1+3*x2+5*x3<=600,'c1')
+solver+=(280*x1+250*x2+400*x3<=6000,'c2')
+solver+=(2*x1+3*x2+4*x3,'obj')
 solver.solve()
