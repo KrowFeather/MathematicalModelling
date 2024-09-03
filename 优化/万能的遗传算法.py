@@ -1,11 +1,23 @@
+####################-----------遗传算法求解TSP问题-----------------------########################
 import numpy as np
 import random
 import matplotlib.pyplot as plt
+plt.rcParams['font.sans-serif'] = ['SimHei']  # 用来正常显示中文标签
+plt.rcParams['axes.unicode_minus'] = False  # 用来正常显示负号
+# 定义约束：限制我们的路线的起点必须是哪里
+equality_constraints = [
+    lambda x: x[0]-1  # 例如：要求一开始必须1
+]
 
-# 检查解是否满足约束条件的函数
+# 不等式约束：要求我们的路线上满足某一种特殊要求
+inequality_constraints = [
+
+]
+
+######################################遗传算法相关实现##################################################
+
+# 检查我们的函数是否满足我们的等式，不等式约束
 def check_constraints(solution, equality_constraints=None, inequality_constraints=None):
-    # equality_constraints: 列表，包含等式约束的lambda表达式
-    # inequality_constraints: 列表，包含不等式约束的lambda表达式
     if equality_constraints:
         for eq in equality_constraints:
             if not np.isclose(eq(solution), 0):
@@ -16,14 +28,16 @@ def check_constraints(solution, equality_constraints=None, inequality_constraint
                 return False
     return True
 
-# 修正解以满足约束条件的函数
+
+# 不满足我们的解，我们就修改我们的对应的解
 def repair_solution(solution, equality_constraints=None, inequality_constraints=None):
     # 示例：将修正策略为返回一个随机解，您可以根据需要调整
     while not check_constraints(solution, equality_constraints, inequality_constraints):
         solution = np.random.permutation(solution)
     return solution
 
-# 计算适应度函数
+
+# 计算我们的一个解的对应的适应度
 def get_fitness(f, N, Distance, L):
     fitness = []
     for i in range(len(f)):
@@ -33,7 +47,8 @@ def get_fitness(f, N, Distance, L):
         fitness.append(length)
     return np.array(fitness)
 
-# 轮盘赌选择
+
+# 轮盘赌选择淘汰，其中我们的适应度越高，我们被淘汰的概率阅读
 def selection(f, fitness, NP):
     total_fitness = np.sum(1 / fitness)  # 适应度值越小越好
     selection_probabilities = (1 / fitness) / total_fitness
@@ -100,9 +115,12 @@ def mutation(f, PM, L, equality_constraints=None, inequality_constraints=None):
             new_chrom = repair_solution(new_chrom, equality_constraints, inequality_constraints)
             f = np.vstack([f, new_chrom])
     return f
+#########################################运行##################################################
 
-# 主程序
+
+########################导入数据#################################
 def main():
+    # 我们的城市的对应的坐标
     city = np.array([
         [1304, 2312], [3639, 1315], [4177, 2244], [3712, 1399], [3488, 1535], [3326, 1556],
         [3238, 1229], [4196, 1044], [4312, 790], [4386, 570], [3007, 1970], [2562, 1756],
@@ -110,31 +128,32 @@ def main():
         [3780, 2212], [3676, 2578], [4029, 2838], [4263, 2931], [3429, 1908], [3507, 2376],
         [3394, 2643], [3439, 3201], [2935, 3240], [3140, 3550], [2545, 2357], [2778, 2826], [2370, 2975]
     ])
-
     N = len(city)
     Distance = np.zeros((N, N))
-
-    # 计算距离矩阵
+    # 计算任意两个城市之间的距离
     for i in range(N):
         for j in range(N):
             Distance[i, j] = np.linalg.norm(city[i] - city[j])
 
+    
+
+##########################调参#####################################
+
     NP = 20  # 种群大小
-    G = 200  # 遗传代数
+    G = 100  # 遗传代数
     L = N  # 编码长度
     PC = 0.7  # 交叉率
     PM = 0.3  # 变异率
-
     # 初始化种群
-    f = np.array([np.random.permutation(L) for _ in range(NP)])
+    f = []
+    while len(f) < NP:
+        individual = np.random.permutation(L)
+        if check_constraints(individual,equality_constraints=equality_constraints,inequality_constraints=inequality_constraints):
+            f.append(individual)
 
-    # 定义约束（如果有的话）
-    equality_constraints = [
-        lambda x: x[0]-0  # 例如：要求一开始必须是0
-    ]
-    inequality_constraints = [
-        # lambda x:   # 例如：假设所有解的最大值不超过30
-    ]
+    f = np.array(f)
+    #print(f)
+    #exit(0)
 
     Rlength = []
 

@@ -2,7 +2,7 @@ import random
 import numpy as np
 import time
 import Topsis as tp
-# 第一步，设置一个初始化的权值
+# 第一步，设置一个初始化的权值,这一个需要我们通过其他的评价算法得到
 w=np.array([0.1405,0.4150,0.3208,0.1237])
 # 第二步：定义一个随机的次数,在wo附近不停的随机
 w0=np.array([0.1405,0.4150,0.3208,0.1237])
