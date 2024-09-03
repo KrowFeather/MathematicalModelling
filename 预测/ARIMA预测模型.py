@@ -1,128 +1,156 @@
 import numpy as np
 import pandas as pd
-import statsmodels.api as sm
-import matplotlib.pyplot as plt
-from scipy import stats
 from statsmodels.tsa.arima.model import ARIMA
-from statsmodels.graphics.api import qqplot
-from statsmodels.stats.diagnostic import acorr_ljungbox as lb_test
-from statsmodels.tsa.stattools import adfuller as ADF
-from statsmodels.tsa.holtwinters import ExponentialSmoothing
+#from statsmodels.tsa.stattools import kpss
+#from statsmodels.tsa.stattools import adfuller
+from scipy.stats import norm
+import arch.unitroot
+import matplotlib.pyplot as plt
 
-# 导入数据并设置日期列为索引
-# 这里将日期解析为日期格式，并将列重命名为“日期”和“女装”
-dta = pd.read_csv('women_dress.csv', parse_dates=['0'])
-dta = dta.rename(columns={'0': '日期', '1': '女装'})
-dta.set_index('日期', inplace=True)
-print(dta)
+def calculate_aic_bic(logL, num_params, num_obs):
+    """Calculate AIC and BIC based on log-likelihood."""
+    aic = -2 * logL + 2 * num_params
+    bic = -2 * logL + num_params * np.log(num_obs)
+    return aic, bic
 
-# 绘制时间序列数据的图表
-plt.plot(dta)
-plt.show()
+def find_pq(data, pmax, qmax, d):
+    """Find optimal p and q based on AIC and BIC criteria."""
+    data = np.reshape(data, (len(data), 1))
+    LOGL = np.zeros((pmax + 1, qmax + 1))
+    PQ = np.zeros((pmax + 1, qmax + 1))
+    
+    for p in range(pmax + 1):
+        for q in range(qmax + 1):
+            try:
+                model = ARIMA(data, order=(p, d, q))
+                fit = model.fit()
+                LOGL[p, q] = fit.llf  # Log-likelihood
+                PQ[p, q] = p + q      # Number of parameters
+            except:
+                LOGL[p, q] = -np.inf
+    
+    # Flatten the arrays
+    LOGL_flat = LOGL.flatten()
+    PQ_flat = PQ.flatten() + 1
+    
+    # Calculate AIC and BIC
+    aic = np.zeros_like(LOGL_flat)
+    bic = np.zeros_like(LOGL_flat)
+    
+    num_obs = len(data)
+    for i in range(len(LOGL_flat)):
+        aic[i], bic[i] = calculate_aic_bic(LOGL_flat[i], PQ_flat[i], num_obs)
+    
+    # Reshape to (pmax+1, qmax+1)
+    aic = np.reshape(aic, (pmax + 1, qmax + 1))
+    bic = np.reshape(bic, (pmax + 1, qmax + 1))
 
-# 显示带有固定尺寸的时间序列图
-dta.plot(figsize=(10, 4))
+    # Find the minimum AIC and BIC
+    p0, q0 = np.unravel_index(np.argmin(aic), aic.shape)
+    p1, q1 = np.unravel_index(np.argmin(bic), bic.shape)
 
-# Holt-Winters法应用于时间序列建模
-#diff1=dta.diff().dropna()
-winter_model = ExponentialSmoothing(dta).fit()
-print(winter_model.summary())
+    # Choose p and q based on the criteria in the MATLAB code
+    if p0**2 + q0**2 > p1**2 + q1**2:
+        p, q = p1, q1
+    else:
+        p, q = p0, q0
+    
+    return p, q
 
-# ADF检验（单位根检验）以检查时间序列的平稳性
-# ADF(dta)
+def ARIMA_model(data, step):
+    """Fit ARIMA model and forecast."""
+    ddata = data.copy()
+    #print(len(data))
+    print(ddata[0])
+    d = 0
+    #print(ddata)
+    #print(a.pvalue)
+#    print(a)
+    #exit(0)
+#    ddata=np.diff(ddata)
+    while 1: 
+        a = arch.unitroot.KPSS(ddata)
+        #_,p_value,_,_=kpss_test(ddata,regression='ct')
+        if(a.pvalue<0.05):
+            break
+        #print(len(ddata))
+        ddata = np.diff(ddata)
+        print(ddata[0])
+        d += 1
+        if d > 3:
+            break
+    print(d)  
+    exit(0)
+    pmax, qmax = 3, 3
+    p, q = find_pq(data, pmax, qmax, d)
+    
+    model = ARIMA(data, order=(p, d, q))
+    model_fit = model.fit()
+    
+    forecast_data = model_fit.get_forecast(steps=step)
+    forData = forecast_data.predicted_mean
+    ymse = forecast_data.se_mean
 
-'''
-这里参数lags=5表示只检验滞后五期。
-我们可以看到五期的P值全部小于0.05，
-说明在0.05的显著性水平下，
-该数据不是纯随机序列，可以进行下一步建模。
-'''
+    plt.figure(figsize=(10, 6))
+    plt.plot(range(len(data)), data, label="Historical Data", color='blue')
+    plt.plot(range(len(data), len(data) + step), forData, label="Forecasted Data", color='red')
+    plt.fill_between(range(len(data), len(data) + step), 
+                     forData - 1.96 * ymse, 
+                     forData + 1.96 * ymse, color='red', alpha=0.3)
+    plt.xlabel("Time")
+    plt.ylabel("Values")
+    plt.title("ARIMA Model Forecast")
+    plt.legend()
+    plt.show()
+    
+    return forData, p, d, q
 
-# 自相关图（确定q）和偏自相关图（确定p）
-fig = plt.figure(figsize=(8, 5))
-ax1 = fig.add_subplot(211)
-fig = sm.graphics.tsa.plot_acf(dta.values.squeeze(), lags=40, ax=ax1)
-ax2 = fig.add_subplot(212)
-fig = sm.graphics.tsa.plot_pacf(dta, lags=40, ax=ax2)
-plt.tight_layout()
-plt.show()
+def kpss_test(x, regression='c', nlags=None):
+    """
+    Kwiatkowski-Phillips-Schmidt-Shin (KPSS) test for stationarity.
 
-'''
-ACF图拖尾，PACF图2阶截尾，建议拟合AR(2)模型。
-'''
+    Parameters:
+    x (array_like): The data series.
+    regression (str): The type of regression to use. Can be 'c' (constant) or 'ct' (constant and trend).
+    nlags (int): Number of lags to use in the Newey-West estimator. If None, it defaults to int(12 * (n / 100)**(1/4)).
 
-# 一阶差分以使非平稳序列变为平稳序列
-diff1 = dta.diff().dropna()
-plt.plot(diff1)
-plt.show()
+    Returns:
+    tuple: The test statistic and p-value.
+    """
+    n = x.shape[0]
+    
+    if nlags is None:
+        nlags = int(12 * (n / 100)**(1/4))
+    
+    # Calculate the mean of the series
+    mean = np.mean(x)
+    
+    # Calculate the cumulative sum of the series
+    cumsum = np.cumsum(x - mean)
+    
+    # Calculate the long-run variance using the Newey-West estimator
+    s = np.zeros(nlags + 1)
+    for i in range(nlags + 1):
+        s[i] = np.sum((cumsum[i:] - cumsum[:-i])**2)
+    s = np.sum(s) / n**2
+    
+    # Calculate the test statistic
+    test_statistic = np.sum((cumsum - np.mean(cumsum))**2) / (n**2 * s)
+    
+    # Calculate the p-value
+    p_value = 1 - norm.cdf(test_statistic, loc=0, scale=1)
+    
+    return test_statistic, p_value
 
-diff2= diff1.diff().dropna()
-plt.plot(diff2)
-plt.show()
+# Example usage:
+data = pd.read_excel('太阳黑子数.xlsx')
+#print(data)
+#exit(0)
+data=data.iloc[-1001:, 3]
+#print(data)
+#exit(0)
+data=data.values
 
-diff3=diff2.diff().dropna()
-plt.plot(diff3)
-plt.show()
-# 差分后的自相关图和偏自相关图
-fig = plt.figure(figsize=(8, 5))
-ax1 = fig.add_subplot(211)
-fig = sm.graphics.tsa.plot_acf(diff3.values.squeeze(), lags=40, ax=ax1)
-ax2 = fig.add_subplot(212)
-fig = sm.graphics.tsa.plot_pacf(diff3, lags=40, ax=ax2)
-plt.tight_layout()
-plt.show()
-
-# 使用ARIMA模型进行拟合，参数order=(p,d,q)
-arma_mod20 = ARIMA(dta, order=(1, 3, 3)).fit()  # p=1, d=1, q=1
-print(arma_mod20.params)
-
-# 残差检验
-arma_mod20.resid.plot(figsize=(10, 3))
-
-# 正态性检验
-stats.normaltest(arma_mod20.resid)
-
-# QQ图用于查看残差的正态性
-qqplot(arma_mod20.resid, line="q", fit=True)
-
-# Durbin-Watson检验，用于检测残差的自相关性
-dw_stat = sm.stats.durbin_watson(arma_mod20.resid.values)
-print(f'Durbin-Watson statistic: {dw_stat}')
-
-# Ljung-Box检验，用于进一步检查残差的白噪声特性
-lb = lb_test(arma_mod20.resid, return_df=True, lags=5)
-print(lb)
-
-# 残差的自相关和偏自相关图
-fig = plt.figure(figsize=(8, 5))
-ax1 = fig.add_subplot(211)
-fig = sm.graphics.tsa.plot_acf(arma_mod20.resid.values.squeeze(), lags=40, ax=ax1)
-ax2 = fig.add_subplot(212)
-fig = sm.graphics.tsa.plot_pacf(arma_mod20.resid, lags=40, ax=ax2)
-
-# 模型预测
-predict_sunspots = arma_mod20.predict(start="1989-01-01", end="1998-12-01")
-
-# 绘制实际值与预测值的比较图
-plt.figure(figsize=(10, 4))
-plt.plot(dta.index, dta['女装'], label='Actual')
-plt.plot(predict_sunspots.index, predict_sunspots, label='Predicted')
-plt.legend(['Actual', 'Predicted'])
-plt.xlabel('Time (Year)')
-plt.ylabel('Women\'s Dress Sales')
-plt.show()
-
-# 模型评价：计算MAE和RMSE
-from sklearn.metrics import mean_absolute_error, mean_squared_error
-
-def evaluation(y_test, y_predict):
-    mae = mean_absolute_error(y_test, y_predict)
-    rmse = np.sqrt(mean_squared_error(y_test, y_predict))
-    return mae, rmse
-
-mae, rmse = evaluation(dta.to_numpy(), predict_sunspots[:len(dta)].to_numpy())
-print(f'MAE: {mae}, RMSE: {rmse}')
-
-# 结束程序
-
-exit(0)
+step = 30  # Number of steps to forecast
+forData, p, d, q = ARIMA_model(data, step)
+print(p,d,q)

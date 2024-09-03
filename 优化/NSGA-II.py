@@ -1,31 +1,37 @@
-# Program Name: NSGA-II.py
-# Description: This is a python implementation of Prof. Kalyanmoy Deb's popular NSGA-II algorithm
-# Author: Haris Ali Khan 
-# Supervisor: Prof. Manoj Kumar Tiwari
-
-# Importing required modules
+#NSGA-II用于我们的多目标优化
+#使用这一种方法，我们最后得到的是一条曲线（帕累托曲线）
 import math
 import random
 import matplotlib.pyplot as plt
 
-# First function to optimize, 目标函数1
+# 我们要优化的函数1
 def function1(x):
     value = -x**2  # 计算目标函数1的值
     return value
 
-# Second function to optimize，目标函数2
+# 我们要优化的函数2
 def function2(x):
     value = -(x-2)**2  # 计算目标函数2的值
     return value
 
-# Function to find index of list，备用函数，找到list中a的下标在哪里
+# 定义了我们的约束条件
+def check_constraints(x):
+    # 线性约束：x >= -10
+    if x < -10:
+        return False
+    # 非线性约束：x^2 <= 100
+    if x**2 > 100:
+        return False
+    return True
+#######--------------------遗传算法相关参数-----------------############
+# 辅助函数，用于找到我们i所在的下标
 def index_of(a, list):
     for i in range(0, len(list)):
         if list[i] == a:
             return i  # 返回元素a在列表中的索引
     return -1  # 如果找不到，返回-1
 
-# Function to sort by values，很弱的排序，o(n^2)
+# 根据我们的权值来进行排序
 def sort_by_values(list1, values):
     sorted_list = []
     while(len(sorted_list) != len(list1)):
@@ -34,7 +40,8 @@ def sort_by_values(list1, values):
         values[index_of(min(values), values)] = math.inf  # 将已选中的最小值设为无穷大，避免重复选择
     return sorted_list
 
-# 非支配排序，选取严格比x要打的元素
+
+# 非支配排序，将非支配前沿存储在我们的front当中
 def fast_non_dominated_sort(values1, values2):
     S = [[] for i in range(0, len(values1))]  # 存储每个解支配的解
     front = [[]]  # 存储非支配前沿
@@ -75,7 +82,7 @@ def fast_non_dominated_sort(values1, values2):
     del front[len(front)-1]  # 删除最后一个空的前沿
     return front
 
-# 计算种群的拥挤程度
+# 计算种群的拥挤程度，用于许纳区我们的更优的个体
 def crowding_distance(values1, values2, front):
     distance = [0 for i in range(0, len(front))]  # 初始化拥挤距离
     sorted1 = sort_by_values(front, values1[:])  # 按第一个目标函数排序
@@ -88,15 +95,7 @@ def crowding_distance(values1, values2, front):
         distance[k] = distance[k] + (values1[sorted2[k+1]] - values2[sorted2[k-1]]) / (max(values2) - min(values2))
     return distance
 
-# 补充我们的约束（如果存在的话）
-def check_constraints(x):
-    # 线性约束：x >= -10
-    if x < -10:
-        return False
-    # 非线性约束：x^2 <= 100
-    if x**2 > 100:
-        return False
-    return True
+# 补充我们的约束条件
 
 # 种群变异
 def crossover(a, b):
@@ -115,23 +114,30 @@ def mutation(solution):
         solution = min_x + (max_x - min_x) * random.random()  # 重新生成直到满足约束
     return solution
 
-# 初始化种群的大小，迭代的次数
+##############################遗传算法结束########################################
+
+
+# 初始化种群的大小，迭代的次数（调参）
 pop_size = 20
 max_gen = 921
 
-# 初始化我们的各个初始解
+# 初始化我们的各个初始解（调参）
 min_x = -55
 max_x = 55
 solution = [min_x + (max_x - min_x) * random.random() for i in range(0, pop_size)]  # 生成初始种群
 
 # 确保初始种群满足约束
 solution = [x for x in solution if check_constraints(x)]
+
+
 while len(solution) < pop_size:
     new_solution = min_x + (max_x - min_x) * random.random()
     if check_constraints(new_solution):
         solution.append(new_solution)
 
 gen_no = 0
+######################------执行遗传算法--------########################################
+
 while(gen_no < max_gen):
     # 计算这一代的所有结果
     function1_values = [function1(solution[i]) for i in range(0, pop_size)]  # 计算第一个目标函数的值
@@ -185,7 +191,7 @@ while(gen_no < max_gen):
     solution = [solution2[i] for i in new_solution]  # 更新种群
     gen_no = gen_no + 1  # 增加代数
 
-# 让我们绘制最终的前沿
+###############------绘制结果--------###############################
 function1 = [i * -1 for i in function1_values]  # 反转目标函数值以便绘图
 function2 = [j * -1 for j in function2_values]
 plt.xlabel('Function 1', fontsize=15)
