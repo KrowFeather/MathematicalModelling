@@ -1,0 +1,36 @@
+// Decision Tree
+digraph {
+	"label_28.90303030303031" [label="label <= 28.90303030303031"]
+	"label_20.8" [label="label <= 20.8"]
+	"label_28.90303030303031" -> "label_20.8"
+	"label_16.6" [label="label <= 16.6"]
+	"label_20.8" -> "label_16.6"
+	"leaf_14.654838709677419" [label="Leaf: 14.654838709677419" color=lightblue style=filled]
+	"label_16.6" -> "leaf_14.654838709677419"
+	"label_18.9" [label="label <= 18.9"]
+	"label_16.6" -> "label_18.9"
+	"leaf_18.181481481481484" [label="Leaf: 18.181481481481484" color=lightblue style=filled]
+	"label_18.9" -> "leaf_18.181481481481484"
+	"leaf_19.962857142857143" [label="Leaf: 19.962857142857143" color=lightblue style=filled]
+	"label_18.9" -> "leaf_19.962857142857143"
+	"label_25.0" [label="label <= 25.0"]
+	"label_20.8" -> "label_25.0"
+	"label_22.9" [label="label <= 22.9"]
+	"label_25.0" -> "label_22.9"
+	"leaf_21.975000000000005" [label="Leaf: 21.975000000000005" color=lightblue style=filled]
+	"label_22.9" -> "leaf_21.975000000000005"
+	"leaf_23.98" [label="Leaf: 23.98" color=lightblue style=filled]
+	"label_22.9" -> "leaf_23.98"
+	"leaf_27.37857142857143" [label="Leaf: 27.37857142857143" color=lightblue style=filled]
+	"label_25.0" -> "leaf_27.37857142857143"
+	"label_39.8" [label="label <= 39.8"]
+	"label_28.90303030303031" -> "label_39.8"
+	"label_33.8" [label="label <= 33.8"]
+	"label_39.8" -> "label_33.8"
+	"leaf_31.39375" [label="Leaf: 31.39375" color=lightblue style=filled]
+	"label_33.8" -> "leaf_31.39375"
+	"leaf_36.39565217391304" [label="Leaf: 36.39565217391304" color=lightblue style=filled]
+	"label_33.8" -> "leaf_36.39565217391304"
+	"leaf_47.089999999999996" [label="Leaf: 47.089999999999996" color=lightblue style=filled]
+	"label_39.8" -> "leaf_47.089999999999996"
+}
