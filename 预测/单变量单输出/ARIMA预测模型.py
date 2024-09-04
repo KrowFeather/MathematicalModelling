@@ -80,7 +80,7 @@ def ARIMA_model(data, step):
         if d > 3:
             break
     print(d)  
-    exit(0)
+    #exit(0)
     pmax, qmax = 3, 3
     p, q = find_pq(data, pmax, qmax, d)
     
